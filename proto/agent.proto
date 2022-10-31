@@ -1,0 +1,75 @@
+syntax = "proto3";
+package eleven.agent;
+
+option go_package = "github.com/eleven-sh/agent/proto";
+
+service Agent {
+  rpc InitInstance (InitInstanceRequest) returns (stream InitInstanceReply) {}
+  rpc InstallRuntimes (InstallRuntimesRequest) returns (stream InstallRuntimesReply) {}
+  rpc CheckDomainReachability (CheckDomainReachabilityRequest) returns (stream CheckDomainReachabilityReply) {}
+  rpc ReconcileServedPortsState (ReconcileServedPortsStateRequest) returns (stream ReconcileServedPortsStateReply) {}
+  rpc TryToStartLongRunningProcess (TryToStartLongRunningProcessRequest) returns (stream TryToStartLongRunningProcessReply) {}
+}
+
+message InitInstanceRequest {
+  string env_name = 1;
+  string env_name_slug = 2;
+  repeated EnvRepository env_repos = 3;
+  string github_user_email = 4;
+  string user_full_name = 5;
+}
+
+message EnvRepository {
+  string owner = 1;
+  string name = 2;
+}
+
+message InitInstanceReply {
+  string log_line_header = 1;
+  string log_line = 2;
+  optional string github_ssh_public_key_content = 3;
+}
+
+message InstallRuntimesRequest {
+  map<string, string> runtimes = 1;
+}
+
+message InstallRuntimesReply {
+  string log_line_header = 1;
+  string log_line = 2;
+}
+
+message CheckDomainReachabilityRequest {
+  string domain = 1;
+  map<string, EnvServedPortBindings> served_ports = 2;
+  string unique_id = 3;
+}
+
+message CheckDomainReachabilityReply {}
+
+message ReconcileServedPortsStateRequest {
+  map<string, EnvServedPortBindings> served_ports = 1;
+}
+
+message EnvServedPortBindings {
+  repeated EnvServedPortBinding bindings = 1;
+}
+
+message EnvServedPortBinding {
+  string value = 1;
+  string type = 2;
+  bool   redirect_to_https = 3;
+}
+
+message ReconcileServedPortsStateReply {}
+
+message TryToStartLongRunningProcessRequest {
+  string cwd = 1;
+  string cmd = 2;
+}
+
+message TryToStartLongRunningProcessReply {
+  string heartbeat = 1;
+  string error_output = 2;
+  string error_message = 3;
+}
