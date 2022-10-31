@@ -205,16 +205,16 @@ func forwardProxyConnToLocalhost(
 	proxyConnChan := make(chan error, 1)
 	localConnChan := make(chan error, 1)
 
-	// Forward proxy -> local
-	go func() {
-		_, err := io.Copy(proxyConn, localConn)
-		proxyConnChan <- err
-	}()
-
 	// Forward local -> proxy
 	go func() {
-		_, err := io.Copy(localConn, proxyConn)
+		_, err := io.Copy(proxyConn, localConn)
 		localConnChan <- err
+	}()
+
+	// Forward proxy -> local
+	go func() {
+		_, err := io.Copy(localConn, proxyConn)
+		proxyConnChan <- err
 	}()
 
 	select {
