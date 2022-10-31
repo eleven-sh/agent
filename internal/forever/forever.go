@@ -73,9 +73,10 @@ func runStartAction(cmdWD, cmd string) error {
 		return err
 	}
 
-	if _, processExist := agentConfig.LongRunningProcesses[env.ConfigLongRunningProcessWD(cmdWD)]; processExist {
+	if cmd, processExist := agentConfig.LongRunningProcesses[env.ConfigLongRunningProcessWD(cmdWD)]; processExist {
 		return fmt.Errorf(
-			"a command is already running in current path. Run \"forever stop\" first%s",
+			"\"%s\" is already running in current path. Run \"forever stop\" first%s",
+			cmd,
 			".", // bypass static-check linter
 		)
 	}
