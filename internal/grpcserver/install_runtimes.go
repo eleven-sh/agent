@@ -23,12 +23,39 @@ func (*agentServer) InstallRuntimes(
 	stream proto.Agent_InstallRuntimesServer,
 ) error {
 
-	for runtime, runtimeVersion := range req.Runtimes {
+	type runtime struct {
+		name    string
+		version string
+	}
+	orderedRuntimes := []runtime{}
+	var rubyRuntime *runtime
+
+	for runtimeName, runtimeVersion := range req.Runtimes {
+		if runtimeName == "ruby" {
+			rubyRuntime = &runtime{
+				name:    runtimeName,
+				version: runtimeVersion,
+			}
+			continue
+		}
+
+		orderedRuntimes = append(orderedRuntimes, runtime{
+			name:    runtimeName,
+			version: runtimeVersion,
+		})
+	}
+
+	// RVM needs to be the last change to the $PATH env var
+	if rubyRuntime != nil {
+		orderedRuntimes = append(orderedRuntimes, *rubyRuntime)
+	}
+
+	for _, runtime := range orderedRuntimes {
 		err := stream.Send(&proto.InstallRuntimesReply{
 			LogLineHeader: fmt.Sprintf(
 				"Installing %s@%s",
-				runtime,
-				runtimeVersion,
+				runtime.name,
+				runtime.version,
 			),
 		})
 
@@ -37,7 +64,7 @@ func (*agentServer) InstallRuntimes(
 		}
 
 		installRuntimeScriptFilePath, err := createInstallRuntimeScriptFile(
-			runtime,
+			runtime.name,
 		)
 
 		if err != nil {
@@ -48,7 +75,7 @@ func (*agentServer) InstallRuntimes(
 
 		installRuntimeCmd := buildInstallRuntimeCmd(
 			installRuntimeScriptFilePath,
-			runtimeVersion,
+			runtime.version,
 		)
 
 		stdoutReader, err := buildInstallRuntimeCmdStdoutReader(installRuntimeCmd)
@@ -102,8 +129,8 @@ func (*agentServer) InstallRuntimes(
 		if err := installRuntimeCmd.Wait(); err != nil {
 			return fmt.Errorf(
 				"error installing %s@%s (%v)",
-				runtime,
-				runtimeVersion,
+				runtime.name,
+				runtime.version,
 				err,
 			)
 		}
