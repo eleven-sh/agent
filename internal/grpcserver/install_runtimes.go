@@ -29,7 +29,9 @@ func (*agentServer) InstallRuntimes(
 	stream proto.Agent_InstallRuntimesServer,
 ) error {
 
-	for _, runtime := range sortRuntimes(req.Runtimes) {
+	sortedRuntimes := sortRuntimes(req.Runtimes)
+
+	for _, runtime := range sortedRuntimes {
 		err := stream.Send(&proto.InstallRuntimesReply{
 			LogLineHeader: fmt.Sprintf(
 				"Installing %s@%s",
