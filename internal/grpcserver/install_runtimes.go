@@ -9,11 +9,17 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sort"
 
 	"github.com/eleven-sh/agent/config"
 	"github.com/eleven-sh/agent/internal/env"
 	"github.com/eleven-sh/agent/proto"
 )
+
+type runtime struct {
+	name    string
+	version string
+}
 
 //go:embed runtimes/*
 var runtimeScripts embed.FS
@@ -23,34 +29,7 @@ func (*agentServer) InstallRuntimes(
 	stream proto.Agent_InstallRuntimesServer,
 ) error {
 
-	type runtime struct {
-		name    string
-		version string
-	}
-	orderedRuntimes := []runtime{}
-	var rubyRuntime *runtime
-
-	for runtimeName, runtimeVersion := range req.Runtimes {
-		if runtimeName == "ruby" {
-			rubyRuntime = &runtime{
-				name:    runtimeName,
-				version: runtimeVersion,
-			}
-			continue
-		}
-
-		orderedRuntimes = append(orderedRuntimes, runtime{
-			name:    runtimeName,
-			version: runtimeVersion,
-		})
-	}
-
-	// RVM needs to be the last change to the $PATH env var
-	if rubyRuntime != nil {
-		orderedRuntimes = append(orderedRuntimes, *rubyRuntime)
-	}
-
-	for _, runtime := range orderedRuntimes {
+	for _, runtime := range sortRuntimes(req.Runtimes) {
 		err := stream.Send(&proto.InstallRuntimesReply{
 			LogLineHeader: fmt.Sprintf(
 				"Installing %s@%s",
@@ -150,6 +129,41 @@ func (*agentServer) InstallRuntimes(
 		config.ElevenAgentConfigFilePath,
 		agentConfig,
 	)
+}
+
+func sortRuntimes(runtimes map[string]string) []runtime {
+	runtimeNames := []string{}
+	for runtimeName := range runtimes {
+		runtimeNames = append(runtimeNames, runtimeName)
+	}
+	sort.Strings(runtimeNames)
+
+	sortedRuntimes := []runtime{}
+	var rubyRuntime *runtime
+
+	for _, runtimeName := range runtimeNames {
+		runtimeVersion := runtimes[runtimeName]
+
+		if runtimeName == "ruby" {
+			rubyRuntime = &runtime{
+				name:    runtimeName,
+				version: runtimeVersion,
+			}
+			continue
+		}
+
+		sortedRuntimes = append(sortedRuntimes, runtime{
+			name:    runtimeName,
+			version: runtimeVersion,
+		})
+	}
+
+	// RVM needs to be the last change to the $PATH env var
+	if rubyRuntime != nil {
+		sortedRuntimes = append(sortedRuntimes, *rubyRuntime)
+	}
+
+	return sortedRuntimes
 }
 
 func createInstallRuntimeScriptFile(runtime string) (string, error) {
