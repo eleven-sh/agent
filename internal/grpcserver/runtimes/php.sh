@@ -1,6 +1,9 @@
 #!/bin/bash
 # Install PHP
-set -euo pipefail
+set -o errexit
+set -o nounset
+set -o pipefail
+set -o xtrace
 
 log () {
   echo -e "${1}" >&2
